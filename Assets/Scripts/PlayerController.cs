@@ -9,10 +9,14 @@ public class PlayerController : MonoBehaviour
     private Vector3 targetLoc;
     private int currentIndex;
     private int arrayNumber;
+    private int index = 1;
     private bool isMoving = false;
     private bool isJumping = false;
-    
+    private Vector3[] wpLocations;
+
+
     public Transform[] wayPoints;
+
 
     [SerializeField] private TunnelManager tunnelScript;
 
@@ -31,9 +35,7 @@ public class PlayerController : MonoBehaviour
 
         targetLoc = wayPoints[1].position;
 
-        
-
-
+        wpLocations = new Vector3[3];
     }
 
     
@@ -43,9 +45,14 @@ public class PlayerController : MonoBehaviour
     {
         //m_rigidBody.velocity = Vector3.forward * speed;
 
+        for(int i = 0; i<3; ++i)
+        {
+            wpLocations[i] = wayPoints[i].position;
+        }
+
+        if (isMoving)
+            MoveToWayPoint();
         
-
-
 
     #if UNITY_EDITOR
         {
@@ -100,28 +107,30 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetAxisRaw("Horizontal") == -1)
         {
-            Debug.Log("left arrow pressed");
-
+            isMoving = true;
 
             switch (currentIndex)
             {
                 case 0:
                     // move to left waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[0].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[0].position, turnSpeed * Time.deltaTime);
+                    index = 0;
                     //targetLoc = wayPoints[0].position;
                     
                     break;
                 case 1:
                     // move to left waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[0].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[0].position, turnSpeed * Time.deltaTime);
+                    index = 0;
                     //targetLoc = wayPoints[0].position;
-                    
+
                     break;
                 case 2:
                     // move to middle waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[1].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[1].position, turnSpeed * Time.deltaTime);
+                    index = 1;
                     //targetLoc = wayPoints[1].position;
-                    
+
                     break;
             }
 
@@ -131,21 +140,26 @@ public class PlayerController : MonoBehaviour
         {
             Debug.Log("right arrow pressed");
 
+            isMoving = true;
+
             switch (currentIndex)
             {
                 case 0:
                     // move to middle waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[1].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[1].position, turnSpeed * Time.deltaTime);
+                    index = 1;
                     //targetLoc = wayPoints[1].position;
                     break;
                 case 1:
                     // move to right waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[2].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[2].position, turnSpeed * Time.deltaTime);
+                    index = 2;
                     //targetLoc = wayPoints[2].position;
                     break;
                 case 2:
                     // move to right waypoint
-                    transform.position = Vector3.MoveTowards(transform.position, wayPoints[2].position, turnSpeed * Time.deltaTime);
+                    //transform.position = Vector3.MoveTowards(transform.position, wayPoints[2].position, turnSpeed * Time.deltaTime);
+                    index = 2;
                     //targetLoc = wayPoints[2].position;
                     break;
             }
@@ -179,5 +193,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
+    private void MoveToWayPoint()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, wpLocations[index], turnSpeed * Time.deltaTime);
+        float distance = Vector3.Distance(gameObject.transform.position, wpLocations[index]);
+
+        if(distance < 0.1f)
+        {
+            isMoving = false;
+        }
+    }
 
 }

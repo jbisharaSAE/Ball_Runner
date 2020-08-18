@@ -93,14 +93,7 @@ MonoBehaviour:
   m_templateMaterial: {fileID: 2100000, guid: 93650598a03e42b43b19fe787c484e93, type: 2}
   m_doNotOverwriteTemplateMaterialProperties: 0
   m_lineColor: {r: 0.76862746, g: 0, b: 1, a: 1}
-  m_lineWidth: 20
-  m_lightSaberFactor: 0.8
+  m_lineWidth: 1
+  m_lightSaberFactor: 0.858
   m_lineVertices:
   - {x: 50, y: 0, z: 0}
-  - {x: 100, y: 0, z: 0}
-  - {x: 150, y: 50, z: 0}
-  - {x: 150, y: 100, z: 0}
-  - {x: 100, y: 150, z: 0}
-  - {x: 50, y: 150, z: 0}
-  - {x: 0, y: 100, z: 0}
-  - {x: 0, y: 0, z: 0}

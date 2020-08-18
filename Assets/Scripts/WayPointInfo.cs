@@ -10,7 +10,7 @@ public class WayPointInfo : MonoBehaviour
 
     private void Start()
     {
-        transform.parent = null;    
+        //transform.parent = null;    
     }
 
     private void Update()

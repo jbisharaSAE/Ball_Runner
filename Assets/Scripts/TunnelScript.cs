@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 public class TunnelScript : MonoBehaviour
 {
     [SerializeField] private GameObject[] walls;
+    private int counter = 0;
 
     // Start is called before the first frame update
     void Start()
@@ -14,9 +15,10 @@ public class TunnelScript : MonoBehaviour
         {
             float rand = Random.value;
 
-            if(rand < 0.5f)
+            if(rand < 0.5f && counter < 2)
             {
                 walls[i].SetActive(true);
+                ++counter;
             }
 
         }
