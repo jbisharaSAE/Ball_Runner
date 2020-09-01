@@ -6,7 +6,9 @@ public class WayPointInfo : MonoBehaviour
 {
     public int wayPointNumber;
 
-    [SerializeField] Transform player;
+    [SerializeField] GameObject player;
+
+    private bool isTrigger;
 
     private void Start()
     {
@@ -15,8 +17,28 @@ public class WayPointInfo : MonoBehaviour
 
     private void Update()
     {
-        transform.position = new Vector3(transform.position.x, transform.position.y, player.position.z);
+        transform.position = new Vector3(transform.position.x, transform.position.y, player.transform.position.z);
+
+        if (isTrigger)
+        {
+            player.GetComponent<PlayerController>().currentIndex = wayPointNumber;
+        }
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == "Player")
+        {
+            isTrigger = true;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if(other.gameObject.tag == "Player")
+        {
+            isTrigger = false;
+        }
+    }
 
 }
