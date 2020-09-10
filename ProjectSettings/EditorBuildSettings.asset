@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Examples/Scenes/Main.unity
-    guid: 17d10320f148ee64488837d5f8008cfd
+    path: Assets/Scenes/BallRunner.unity
+    guid: acffd7e307b2ed345ac12d50d0bdaaa7
   m_configObjects: {}
