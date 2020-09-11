@@ -6,7 +6,8 @@ public class WayPointInfo : MonoBehaviour
 {
     public int wayPointNumber;
 
-    [SerializeField] GameObject player;
+    [SerializeField] private GameObject player;
+    [SerializeField] private GameObject[] highlightLanes;
 
     private bool isTrigger;
 
@@ -30,6 +31,8 @@ public class WayPointInfo : MonoBehaviour
         if(other.gameObject.tag == "Player")
         {
             isTrigger = true;
+            highlightLanes[0].SetActive(true);
+            highlightLanes[1].SetActive(true);
         }
     }
 
@@ -38,6 +41,8 @@ public class WayPointInfo : MonoBehaviour
         if(other.gameObject.tag == "Player")
         {
             isTrigger = false;
+            highlightLanes[0].SetActive(false);
+            highlightLanes[1].SetActive(false);
         }
     }
 

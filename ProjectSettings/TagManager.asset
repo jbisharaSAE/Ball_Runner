@@ -10,6 +10,8 @@ TagManager:
   - JumpTrigger
   - Projectile
   - Pickup
+  - Sun
+  - Tunnel
   layers:
   - Default
   - TransparentFX

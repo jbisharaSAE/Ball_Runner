@@ -1,44 +1,69 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using Liminal.SDK.VR;
 using Liminal.SDK.VR.Input;
+using Liminal.SDK.Core;
+using Liminal.SDK.VR.Avatars;
+using Liminal.Core.Fader;
+using TMPro;
 
 
 public class PlayerController : MonoBehaviour
 {
-    private Rigidbody m_rigidBody;
     private int m_currentIndex;
     private int index = 1;
     private bool isMoving = false;
     private bool isJumping = false;
+    private bool isBoosting = false;
+    private bool isEnded = false;
     private int bulletCounter = 3;
+    private int comboMultiplier;
+    private float scoreTimer;
+    private float scorePoints;
     private Vector3[] wpLocations;
+    private AudioSource myAudioSource;
 
+
+    public float endTime = 175f;
     public Transform[] wayPoints;
 
-    [SerializeField] private Transform rightHandAnchor;
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private GameObject lightningState;
     [SerializeField] private TunnelManager tunnelScript;
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private float speed;
     [SerializeField] private float turnSpeed;
-    [SerializeField] private float m_JumpSpeed;
-    [SerializeField] private float m_Offset;
-    [SerializeField] private float m_Time = 0f;
 
+    [Header("End Game Objects")]
+    [SerializeField] private GameObject fantasySun;
+    [SerializeField] private GameObject spaceShip;
+    [SerializeField] private GameObject flameJet;
+    [SerializeField] private GameObject[] fireworks;
 
+    [Header("UI Elements")]
+    [SerializeField] private TextMeshProUGUI comboText;
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI comboX;
+    [SerializeField] private Image panelImage;
+    [SerializeField] private Image []bulletImages;
+
+    [Header("Audio SFX")]
+    [SerializeField] private AudioClip gunFireSFX;
+    [SerializeField] private AudioClip speedBoostSFX;
+    [SerializeField] private AudioClip wallHitSFX;
+    [SerializeField] private AudioClip bulletPickupSFX;
 
     public int currentIndex { get { return m_currentIndex; } set { m_currentIndex = value; } }
 
     // Start is called before the first frame update
     void Start()
-    {
-        m_rigidBody = GetComponent<Rigidbody>();
-
+    {   
         // middle waypoint
         m_currentIndex = 1;
+
+        myAudioSource = GetComponent<AudioSource>();
 
         wpLocations = new Vector3[3];
     }
@@ -48,10 +73,65 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (isEnded)
+            return;
 
-        //m_rigidBody.velocity = Vector3.forward * speed;
+        TrackingTime();
 
-        Jump();
+        Movement();
+
+        Scoreboard();
+
+        VrController();
+
+    }
+
+    private void PlaySFX(AudioClip clip)
+    {
+        myAudioSource.PlayOneShot(clip);
+    }
+
+    private void TrackingTime()
+    {
+       if(Time.time > endTime)
+        {
+            fantasySun.transform.parent = null;
+            
+        }
+    }
+
+    private void Scoreboard()
+    {
+        scoreTimer += Time.deltaTime;
+        scorePoints += Time.deltaTime * comboMultiplier * 10f;
+        scoreText.text = scorePoints.ToString("F0");
+
+        if(scoreTimer > 0f && scoreTimer < 5f)
+        {
+            comboText.text = "Combo      1";
+            comboMultiplier = 1;
+        }
+        else if (scoreTimer >= 5f && scoreTimer < 10f)
+        {
+            comboText.text = "Combo      2";
+            comboMultiplier = 2;
+        }
+        else if (scoreTimer >= 10f && scoreTimer < 15f)
+        {
+            comboText.text = "Combo      4";
+            comboMultiplier = 4;
+        }
+        else if (scoreTimer >= 15f && scoreTimer < 20f)
+        {
+            comboText.text = "Combo      8";
+            comboMultiplier = 8;
+        }
+
+    }
+
+    private void Movement()
+    {
+        transform.Translate(transform.forward * speed * Time.deltaTime);
 
         for (int i = 0; i < 3; ++i)
         {
@@ -60,103 +140,161 @@ public class PlayerController : MonoBehaviour
 
         if (isMoving)
             MoveToWayPoint();
-
-
-
-#if UNITY_EDITOR
-        {
-            // use pc controls
-            PcController();
-        }
-#else
-        {
-            // use vr controls
-            VrController();
-        }
-#endif
-
-
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.tag == "TunnelTrigger")
         {
-            Debug.Log("testing tunnel trigger");
-            tunnelScript.SendMessage("ShiftTunnel");
+            
+            if(Time.time < endTime)
+                tunnelScript.SendMessage("ShiftTunnel");
+
             DestroyTunnel(other.gameObject.transform.parent.gameObject);
         }
-        else if (other.gameObject.tag == "JumpTrigger")
-        {
-            
-            isJumping = false;
-            ResetPos();
-        }
+     
         else if (other.gameObject.tag == "Wall")
         {
-            //other.gameObject.AddComponent<Rigidbody>();
-            //other.gameObject.GetComponent<Rigidbody>().AddExplosionForce(explosionForce, other.gameObject.transform.position, 5.0f, 3.0f, ForceMode.Impulse);
-            //GameObject parentObj = other.transform.parent.gameObject;
-            other.gameObject.GetComponent<Wall>().SendMessage("ExplodeWall");
             
+            if (!isBoosting)
+            {
+                comboMultiplier = 1;
+                scoreTimer = 1f;
+            }
+
+            PlaySFX(wallHitSFX);
+            other.gameObject.GetComponent<Wall>().SendMessage("ExplodeWall");
             
         }
         else if(other.gameObject.tag == "Pickup")
         {
-            Debug.Log("testing Trigger");
-            ActivatePickup(other.gameObject.transform.parent.gameObject.GetComponent<Pickup>().pickupType);
+            
+            ActivatePickup(other.gameObject.GetComponent<Pickup>().pickupType);
             //other.gameObject.GetComponent<MeshRenderer>().enabled = false;
             Destroy(other.gameObject);
             
-
+        }
+        else if(other.gameObject.tag == "Sun")
+        {
+            Debug.Log("Sun Triggered");
+            EndGame();
         }
 
     }
 
     private void ActivatePickup(PickupType item)
     {
-        Debug.Log("testing function");
+        
         int myInt = (int)item;
+
         switch (myInt)
         {
             case 0:
                 // boost speed and immune function
+                StopAllCoroutines();
                 StartCoroutine(BoostSpeed());
                 break;
             case 1:
+
+                PlaySFX(bulletPickupSFX);
                 ++bulletCounter;
+
+                if(bulletCounter >= 4)
+                {
+                    bulletCounter = 3;
+                }
+
+                UpdateBulletImages();
                 break;
         }
     }
 
     IEnumerator BoostSpeed()
     {
+        isBoosting = true;
         lightningState.SetActive(true);
         speed = 45f;
+        PlaySFX(speedBoostSFX);
         yield return new WaitForSeconds(4f);
+
         lightningState.SetActive(false);
         speed = 15f;
+        isBoosting = false;
     }
 
-    private void ResetPos()
+    private void UpdateBulletImages()
     {
-        transform.position = new Vector3(transform.position.x, -1.2f, transform.position.z);
-
-        //switch (currentIndex)
-        //{
-        //    case 1:
-        //        transform.position = new Vector3(transform.position.x, -1.5f, transform.position.z);
-        //        break;
-        //    default:
-        //        transform.position = new Vector3(transform.position.x, -1.1f, transform.position.z);
-        //        break;
-        //}
+        for(int i = 0; i< 4; ++i)
+        {
+            if(i <= bulletCounter)
+            {
+                bulletImages[i].enabled = true;
+            }
+            else
+            {
+                bulletImages[i].enabled = false;
+            }
+        }
+        
     }
 
+   
 
     private void DestroyTunnel(GameObject obj)
     {
-        Destroy(obj, 3f);
+        Destroy(obj, 5f);
+    }
+
+    private IEnumerator FadeToBlackRoutine()
+    {
+        yield return new WaitForSeconds(5f);
+        ScreenFader.Instance.FadeTo(Color.black, duration: 1);
+        yield return ScreenFader.Instance.WaitUntilFadeComplete();
+        ScreenFader.Instance.FadeToClear(duration: 1);
+    }
+
+    private void EndGame()
+    {
+        // end the game
+        isEnded = true;
+        speed = 0f;
+
+        foreach (GameObject obj in fireworks)
+        {
+            obj.transform.parent = null;
+        }
+
+        StartCoroutine(FadeToBlackRoutine());
+        comboX.text = "";
+        panelImage.enabled = false;
+        fantasySun.SetActive(false);
+        flameJet.SetActive(false);
+        lightningState.SetActive(false);
+        spaceShip.SetActive(false);
+        comboText.text = "";
+        
+        foreach(Transform wp in wayPoints)
+        {
+            wp.transform.gameObject.SetActive(false);
+        }
+
+        foreach(GameObject obj in fireworks)
+        {
+            obj.SetActive(true);
+        }
+
+        foreach(Image img in bulletImages)
+        {
+            img.enabled = false;
+        }
+
+        GameObject[] tunnels;
+        tunnels = GameObject.FindGameObjectsWithTag("Tunnel");
+
+        foreach(GameObject obj in tunnels)
+        {
+            Destroy(obj);
+        }
     }
 
     private void PcController()
@@ -177,7 +315,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
-            ShootProjectile();
+            //ShootProjectile();
         }
 
     }
@@ -186,21 +324,24 @@ public class PlayerController : MonoBehaviour
     {
         // vr controls
 
-        //if(OVRInput.GetLocalControllerRotation)
+
+        float zAngle = VRAvatar.Active.PrimaryHand.Transform.localEulerAngles.z;
+
+        Debug.Log(zAngle);
 
         if (VRDevice.Device.GetButtonDown(VRButton.One))
         {
             ShootProjectile();
         }
 
-        if (rightHandAnchor.position.z > 45f)
+        if(zAngle > 35f && zAngle < 90f)
         {
-            //move left
+            // move left
             MoveLeft();
         }
-        else if (rightHandAnchor.position.z < -45f)
+        else if (zAngle > 180f && zAngle < 325f)
         {
-            //move right
+            // move left
             MoveRight();
         }
     }
@@ -254,27 +395,16 @@ public class PlayerController : MonoBehaviour
         {
             Instantiate(projectilePrefab, spawnPoint.position, spawnPoint.rotation);
             --bulletCounter;
+            UpdateBulletImages();
+            PlaySFX(gunFireSFX);
+
+        }
+        if(bulletCounter < 0)
+        {
+            // to make sure player does not keep spamming trigger
+            bulletCounter = -1;
         }
         
-    }
-
-    private void Jump()
-    {
-        transform.Translate(transform.forward * speed * Time.deltaTime);
-
-
-        //transform.position = Vector3.MoveTowards(transform.position, targetLoc, turnSpeed * Time.deltaTime);
-        if (Input.GetButton("Jump"))
-            isJumping = true;
-
-        if (isJumping)
-        {
-            m_Time += m_JumpSpeed * Time.deltaTime;
-
-            Vector3 position = transform.localPosition;
-            position.y = (-1.5f) + Mathf.PingPong(m_Time, 1.5f);
-            transform.localPosition = position;
-        }
     }
 
 
